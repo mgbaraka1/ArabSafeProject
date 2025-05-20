@@ -24,7 +24,7 @@ This repository contains the source code, database schema, attack pipeline, and 
 
 ---
 
-## 🗃️ Database Hugging Face URL
+## Database Hugging Face URL
 https://huggingface.co/datasets/mgbaraka/ArabSafe
 
 ---
