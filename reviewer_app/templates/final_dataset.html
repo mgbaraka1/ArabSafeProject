@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <title>Final Dataset</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+      <style>
+         body { background-color: #f8f9fa; padding-bottom: 4rem; }
+         .table-container { max-width: 95%; margin: auto; margin-top: 2rem; }
+         footer {
+           padding: 1rem;
+           font-size: 0.9rem;
+           max-width: 95%;
+           margin: 2rem auto 1rem auto;
+           position: relative;
+           background-color: #f1f3f5;
+           border-top: 1px solid #dee2e6;
+           text-align: center;
+           font-weight: 500;
+           border-radius: 0.5rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+         }
+         .section-box {
+           border: 1px solid #dee2e6;
+           margin-top: 2rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+           background: #fefefe;
+           border-radius: 0.5rem;
+           padding: 1rem;
+           overflow-x: auto;
+         }
+         .table td, .table th {
+           padding: 0.75rem;
+           vertical-align: middle;
+         }
+         .table-hover tbody tr:hover {
+           background-color: #e2e6ea;
+           cursor: pointer;
+         }
+         .table th {
+           font-weight: 700;
+           font-size: 1rem;
+         }
+         .text-break {
+           white-space: nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
+         }
+         .text-wrap {
+           white-space: normal !important;
+         }
+         .table-container > .d-flex {
+           background-color: #e9ecef;
+           padding: 1rem;
+           border-radius: 0.5rem;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+         }
+         .section-header {
+           background: linear-gradient(to right, #f8f9fa, #e9ecef);
+           padding: 1rem 1.25rem;
+           border-radius: 0.5rem;
+           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+         }
+         .section-header h2 {
+           font-size: 1.5rem;
+         }
+         .section-header .bi {
+           margin-right: 0.5rem;
+         }
+         .table th .bi-info-circle {
+           font-size: 0.9rem;
+           color: #6c757d;
+           margin-left: 5px;
+           cursor: pointer;
+         }
+         .page-item.active .page-link {
+           background-color: #343a40;
+           border-color: #343a40;
+           color: white;
+         }
+      </style>
+   </head>
+   <body>
+      <div class="container py-4 pb-5">
+          {% include 'header.html' %}
+         <div class="container table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3 section-header">
+               <h2><i class="bi bi-database-fill-check"></i> Final Dataset Table</h2>
+            </div>
+            <div class="section-box table-responsive p-3 bg-white rounded shadow-sm">
+               <table class="table table-sm table-striped table-bordered table-hover shadow-sm rounded">
+                  <thead class="table-light">
+                     <tr>
+                        <th style="width: 50px;">ID</th>
+                        <th>Original Prompt <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="The original English or source-language input used."></i></th>
+                        <th>MSA Prompt <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="Prompt translated to Modern Standard Arabic."></i></th>
+                        <th>Egypt Prompt <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="Prompt translated to Egyptian dialect."></i></th>
+                        <th>Saudi Prompt <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="Prompt translated to Saudi (Najdi) dialect."></i></th>
+                        <th>Created At</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {% if rows %}
+                     {% for row in rows %}
+                     <tr class="align-middle">
+                        <td class="text-center"><span class="badge bg-secondary">{{ row['id'] }}</span></td>
+                        <td title="{{ row['original_prompt'] }}" class="small text-wrap" style="max-width: 350px; word-break: break-word;">
+                           {{ row['original_prompt'] }}
+                        </td>
+                        <td title="{{ row['msa_prompt'] }}" class="small text-wrap" style="max-width: 350px; word-break: break-word;">
+                           {{ row['msa_prompt'] }}
+                        </td>
+                        <td title="{{ row['egypt_prompt'] }}" class="small text-wrap" style="max-width: 350px; word-break: break-word;">
+                           {{ row['egypt_prompt'] }}
+                        </td>
+                        <td title="{{ row['saudi_prompt'] }}" class="small text-wrap" style="max-width: 350px; word-break: break-word;">
+                           {{ row['saudi_prompt'] }}
+                        </td>
+                        <td class="small">{{ row['created_at'] }}</td>
+                     </tr>
+                     {% endfor %}
+                     {% else %}
+                     <tr>
+                        <td colspan="6" class="text-center">No data found in final_dataset.</td>
+                     </tr>
+                     {% endif %}
+                  </tbody>
+               </table>
+               <p class="text-center text-muted mt-2 mb-1">
+                  Showing page {{ pagination.page }} of {{ pagination.total_pages }} ({{ pagination.total_rows }} total entries)
+               </p>
+
+               <nav aria-label="Page navigation" class="mb-4">
+                  <ul class="pagination justify-content-center flex-wrap">
+                     {% if pagination.page > 1 %}
+                     <li class="page-item">
+                        <a class="page-link" href="{{ url_for('view_final_dataset', page=1) }}">First</a>
+                     </li>
+                     <li class="page-item">
+                        <a class="page-link" href="{{ url_for('view_final_dataset', page=pagination.page-1) }}">&laquo;</a>
+                     </li>
+                     {% else %}
+                     <li class="page-item disabled"><span class="page-link">First</span></li>
+                     <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                     {% endif %}
+
+                     {% if pagination.start_page > 1 %}
+                     <li class="page-item disabled"><span class="page-link">...</span></li>
+                     {% endif %}
+
+                     {% for p in range(pagination.start_page, pagination.end_page + 1) %}
+                     <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('view_final_dataset', page=p) }}">{{ p }}</a>
+                     </li>
+                     {% endfor %}
+
+                     {% if pagination.end_page < pagination.total_pages %}
+                     <li class="page-item disabled"><span class="page-link">...</span></li>
+                     {% endif %}
+
+                     {% if pagination.page < pagination.total_pages %}
+                     <li class="page-item">
+                        <a class="page-link" href="{{ url_for('view_final_dataset', page=pagination.page+1) }}">&raquo;</a>
+                     </li>
+                     <li class="page-item">
+                        <a class="page-link" href="{{ url_for('view_final_dataset', page=pagination.total_pages) }}">Last</a>
+                     </li>
+                     {% else %}
+                     <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                     <li class="page-item disabled"><span class="page-link">Last</span></li>
+                     {% endif %}
+                  </ul>
+               </nav>
+            </div>
+         </div>
+         <div class="text-center mt-5 mb-5">
+            <a href="{{ url_for('home') }}" class="btn btn-outline-dark">
+            <i class="bi bi-house-door-fill me-1"></i> Home
+            </a>
+         </div>
+        {% include 'footer.html' %}
+      </div>
+   </body>
+   <script>
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el))
+   </script>
+</html>

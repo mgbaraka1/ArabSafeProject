@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Translation Statistics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    body { background-color: #f8f9fa; }
+    .card { border: 1px solid #dee2e6; border-radius: .5rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); }
+    .card-title, .card-text, h4, h6 { font-size: 0.95rem; }
+    h4.fw-bold { font-size: 1.2rem !important; }
+    .fade-in { animation: fadeIn 0.4s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .btn { border-radius: 0.4rem; }
+  </style>
+</head>
+<body class="fade-in">
+
+  <div class="container py-4">
+    {% include 'header.html' %}
+    <div class="text-center mb-5 pt-3">
+      <h2 class="fw-bold mb-3">Translation Quality Review Statistics</h2>
+      <p class="text-muted fs-4 mb-1">Visual summary of reviewed entries in Egyptian and Saudi dialects</p>
+    </div>
+
+    <div class="row mb-5">
+      <div class="col-md-6 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h5 class="card-title text-primary">Egyptian Dialect</h5>
+            <p class="card-text">Reviewed Entries</p>
+            <h4 class="fw-bold">{{ egypt_count }}</h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h5 class="card-title text-danger">Saudi Dialect</h5>
+            <p class="card-text">Reviewed Entries</p>
+            <h4 class="fw-bold">{{ saudi_count }}</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-5">
+      <div class="col-md-6 mb-4">
+        <div class="card p-3">
+          <h6 class="text-center text-primary fw-bold mb-3">Egypt Review Score</h6>
+          <div class="mx-auto" style="max-width: 300px;">
+            <canvas id="egyptChart" height="250"></canvas>
+          </div>
+          <table class="table table-bordered table-sm table-striped table-hover mt-4">
+            <thead class="table-primary text-center">
+              <tr><th>Score</th><th>Count</th></tr>
+            </thead>
+            <tbody class="text-center">
+              {% for i in range(egypt_labels | length) %}
+              <tr><td>{{ egypt_labels[i] }}</td><td>{{ egypt_data[i] }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="card p-3">
+          <h6 class="text-center text-danger fw-bold mb-3">Saudi Review Score</h6>
+          <div class="mx-auto" style="max-width: 300px;">
+            <canvas id="saudiChart" height="250"></canvas>
+          </div>
+          <table class="table table-bordered table-sm table-striped table-hover mt-4">
+            <thead class="table-danger text-center">
+              <tr><th>Score</th><th>Count</th></tr>
+            </thead>
+            <tbody class="text-center">
+              {% for i in range(saudi_labels | length) %}
+              <tr><td>{{ saudi_labels[i] }}</td><td>{{ saudi_data[i] }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-5">
+      <a href="/home" class="btn btn-outline-dark me-3"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+      <a href="/translation-result" class="btn btn-dark"><i class="bi bi-bar-chart-line-fill me-1"></i> Translation Results</a>
+    </div>
+    {% include 'footer.html' %}
+  </div>
+
+  <script>
+    Chart.register(ChartDataLabels);
+
+    const commonOptions = (titleText) => ({
+      cutout: '60%',
+      plugins: {
+        title: {
+          display: true,
+          text: titleText,
+          font: { size: 16 }
+        },
+        datalabels: {
+          color: '#fff',  // White percent text
+          font: {
+            weight: 'bold',
+            size: 13
+          },
+          formatter: (value, context) => {
+            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const percent = ((value / total) * 100).toFixed(1);
+            return percent + '%';
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const value = ctx.raw;
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${ctx.label}: ${value} (${percentage}%)`;
+            }
+          }
+        },
+        legend: { position: 'bottom' }
+      }
+    });
+
+    const egyptChart = new Chart(document.getElementById('egyptChart'), {
+      type: 'doughnut',
+      data: {
+        labels: {{ egypt_labels | tojson }},
+        datasets: [{
+          data: {{ egypt_data | tojson }},
+          backgroundColor: ['#1e7e34', '#0056b3', '#a71d2a'],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: commonOptions('Egypt Review Distribution'),
+      plugins: [ChartDataLabels]
+    });
+
+    const saudiChart = new Chart(document.getElementById('saudiChart'), {
+      type: 'doughnut',
+      data: {
+        labels: {{ saudi_labels | tojson }},
+        datasets: [{
+          data: {{ saudi_data | tojson }},
+          backgroundColor: ['#1e7e34', '#0056b3', '#a71d2a'],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: commonOptions('Saudi Review Distribution'),
+      plugins: [ChartDataLabels]
+    });
+  </script>
+
+</body>
+</html>

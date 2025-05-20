@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Review Entry #{{ row.id }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .section-box {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: .5rem;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    textarea {
+      resize: vertical;
+    }
+    .sticky-footer {
+      position: sticky;
+      bottom: 0;
+      background: #f8f9fa;
+      border-top: 1px solid #ccc;
+      padding-top: 1rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+
+  {% include 'header.html' %}
+
+  <h3 class="mb-4 fw-bold text-dark" style="letter-spacing: 0.5px;">📝 Reviewing Entry #{{ row.id }}</h3>
+  <div class="text-center mb-4">
+    <span class="badge bg-danger fs-6 shadow-sm">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i> Harmful Category: {{ row.harmful_category }}
+    </span>
+  </div>
+
+  <div class="mb-4">
+    <p><strong>Original Prompt:</strong> {{ row.prompt }}</p>
+    <p><strong>Translated MSA:</strong> {{ row.MSA }}</p>
+  </div>
+
+  <!-- Lock Status -->
+  {% set lock_expired = row.locked_at and row.locked_at <= now.isoformat() %}
+  {% if row.locked_by %}
+    {% if row.locked_by == reviewer_name %}
+      <div class="alert alert-success">✅ You are currently editing this entry.</div>
+    {% elif not lock_expired %}
+      <div class="alert alert-warning">🔒 Locked by {{ row.locked_by }} at {{ row.locked_at }}</div>
+    {% else %}
+      <div class="alert alert-secondary">ℹ️ Lock expired from {{ row.locked_by }}</div>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info">🟢 Not locked by anyone.</div>
+  {% endif %}
+
+  <form method="POST" onsubmit="return validateReviewForm();">
+
+    <!-- 🇪🇬 Egyptian Review -->
+    <div class="section-box">
+      <h5 class="text-dark fw-semibold mb-3">🇪🇬 Egyptian Review (Cairene)</h5>
+      <p><strong>AI Output:</strong> {{ row.egypt }}</p>
+
+      {% if row.egypt_reviewed and row.egypt_reviewed != row.egypt %}
+        <div class="text-warning small mb-2">⚠️ Reviewer modified the text</div>
+      {% endif %}
+
+      <label class="form-label">Corrected Text <small class="text-muted" id="egypt-count"></small></label>
+      <textarea class="form-control mb-3" rows="2" name="egypt_reviewed" id="egypt_reviewed"
+        {% if row.egypt_review_score and row.egypt_reviewed and row.egypt_reviewer_name %}disabled{% endif %}>{{ row.egypt_reviewed }}</textarea>
+
+      <label class="form-label">Score</label>
+      <div class="btn-group w-100 mb-3" role="group">
+        {% for label, val in [('Bad', 'Bad'), ('Good', 'Good'), ('Excellent', 'Excellent')] %}
+          <input type="radio" class="btn-check" name="egypt_review_score" id="egypt-{{ val }}" value="{{ val }}"
+            {% if row.egypt_review_score == val %}checked{% endif %}
+            {% if row.egypt_review_score and row.egypt_reviewed and row.egypt_reviewer_name %}disabled{% endif %}>
+          <label class="btn btn-outline-primary" for="egypt-{{ val }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+
+      <label class="form-label">Reviewer Name</label>
+      <input class="form-control" name="egypt_reviewer_name" type="text"
+        value="{{ row.egypt_reviewer_name or reviewer_name }}"
+        {% if row.egypt_review_score and row.egypt_reviewed and row.egypt_reviewer_name %}disabled{% endif %}>
+    </div>
+
+    <!-- 🇸🇦 Saudi Review -->
+    <div class="section-box">
+      <h5 class="text-dark fw-semibold mb-3">🇸🇦 Saudi Review (Najdi)</h5>
+      <p><strong>AI Output:</strong> {{ row.saudi }}</p>
+
+      {% if row.saudi_reviewed and row.saudi_reviewed != row.saudi %}
+        <div class="text-warning small mb-2">⚠️ Reviewer modified the text</div>
+      {% endif %}
+
+      <label class="form-label">Corrected Text <small class="text-muted" id="saudi-count"></small></label>
+      <textarea class="form-control mb-3" rows="2" name="saudi_reviewed" id="saudi_reviewed"
+        {% if row.saudi_review_score and row.saudi_reviewed and row.saudi_reviewer_name %}disabled{% endif %}>{{ row.saudi_reviewed }}</textarea>
+
+      <label class="form-label">Score</label>
+      <div class="btn-group w-100 mb-3" role="group">
+        {% for label, val in [('Bad', 'Bad'), ('Good', 'Good'), ('Excellent', 'Excellent')] %}
+          <input type="radio" class="btn-check" name="saudi_review_score" id="saudi-{{ val }}" value="{{ val }}"
+            {% if row.saudi_review_score == val %}checked{% endif %}
+            {% if row.saudi_review_score and row.saudi_reviewed and row.saudi_reviewer_name %}disabled{% endif %}>
+          <label class="btn btn-outline-primary" for="saudi-{{ val }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+
+      <label class="form-label">Reviewer Name</label>
+      <input class="form-control" name="saudi_reviewer_name" type="text"
+        value="{{ row.saudi_reviewer_name or reviewer_name }}"
+        {% if row.saudi_review_score and row.saudi_reviewed and row.saudi_reviewer_name %}disabled{% endif %}>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div class="sticky-footer d-flex flex-wrap gap-2 justify-content-center text-center">
+      {% if not (row.egypt_review_score and row.saudi_review_score) %}
+        <button type="submit" name="action" value="next" class="btn btn-success">Submit & Next</button>
+        <button type="submit" name="action" value="menu" class="btn btn-outline-primary">Submit & Menu</button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="d-flex justify-content-center gap-3 mt-5 mb-5">
+  <a href="{{ url_for('home') }}" class="btn btn-outline-dark">
+    <i class="bi bi-house-door-fill me-1"></i> Home
+  </a>
+  <a href="{{ url_for('translation_leaderboard') }}" class="btn btn-dark">
+    <i class="bi bi-bar-chart-line me-1"></i> Leaderboard
+  </a>
+  <a href="{{ url_for('translation_result') }}" class="btn btn-dark">
+    <i class="bi bi-translate me-1"></i> Translation Result
+  </a>
+</div>
+{% include 'footer.html' %}
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const egyptAI = {{ row.egypt | tojson | safe }};
+    const saudiAI = {{ row.saudi | tojson | safe }};
+
+    const egyptRadios = document.getElementsByName('egypt_review_score');
+    for (let radio of egyptRadios) {
+      radio.addEventListener('change', () => {
+        if (radio.value === 'Excellent') {
+          document.getElementById('egypt_reviewed').value = egyptAI;
+        }
+      });
+    }
+
+    const saudiRadios = document.getElementsByName('saudi_review_score');
+    for (let radio of saudiRadios) {
+      radio.addEventListener('change', () => {
+        if (radio.value === 'Excellent') {
+          document.getElementById('saudi_reviewed').value = saudiAI;
+        }
+      });
+    }
+
+    const countWords = (id, labelId) => {
+      const el = document.getElementById(id);
+      const label = document.getElementById(labelId);
+      if (!el || !label) return;
+      const update = () => {
+        const wordCount = el.value.trim().split(/\s+/).filter(Boolean).length;
+        label.innerText = `(${wordCount} words)`;
+      };
+      el.addEventListener('input', update);
+      update();
+    };
+    countWords('egypt_reviewed', 'egypt-count');
+    countWords('saudi_reviewed', 'saudi-count');
+  });
+</script>
+
+</body>
+</html>

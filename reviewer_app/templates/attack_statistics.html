@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Attack Statistics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
+            padding-top: 2rem;
+            padding-bottom: 4rem;
+            min-height: 100vh;
+        }
+        .stats-card {
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            background: white;
+            margin-bottom: 2rem;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+        }
+        .stats-header {
+            margin-bottom: 1rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #333;
+        }
+        footer {
+            margin-top: 4rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+            padding: 1rem;
+            border-top: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+        .badge {
+            opacity: 0;
+            transform: translateY(-10px);
+            animation: fadeInBadge 0.8s ease forwards;
+            font-size: 1rem;
+        }
+        @keyframes fadeInBadge {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+{% include 'header.html' %}
+
+    <h1 class="text-center mb-5">📊 Attack Statistics</h1>
+
+    <!-- Filter Section -->
+    <div class="stats-card mb-4">
+        <form method="get" action="" class="d-flex align-items-center gap-3">
+            <label for="version" class="form-label mb-0"><strong>Filter by Version:</strong></label>
+            <select name="version" id="version" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">All Versions</option>
+                <option value="1" {% if request.args.get('version') == '1' %}selected{% endif %}>Version 1</option>
+                <option value="2" {% if request.args.get('version') == '2' %}selected{% endif %}>Version 2</option>
+            </select>
+
+            <label for="model_name" class="form-label mb-0"><strong>LLM Model:</strong></label>
+            <select name="model_name" id="model_name" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">All Models</option>
+                {% for model in available_models %}
+                <option value="{{ model }}" {% if request.args.get('model_name') == model %}selected{% endif %}>{{ model }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="dialect" class="form-label mb-0"><strong>Dialect:</strong></label>
+            <select name="dialect" id="dialect" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">All Dialects</option>
+                <option value="MSA" {% if request.args.get('dialect') == 'MSA' %}selected{% endif %}>MSA</option>
+                <option value="Egyptian" {% if request.args.get('dialect') == 'Egyptian' %}selected{% endif %}>Egyptian</option>
+                <option value="Saudi" {% if request.args.get('dialect') == 'Saudi' %}selected{% endif %}>Saudi</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Badges Section -->
+    <div class="stats-card text-center mb-5">
+        <h5 class="mb-4">Attack Status Overview</h5>
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            <span class="badge bg-success p-3">Pass with Response: {{ pass_with_response }}</span>
+            <span class="badge bg-success p-3">Pass with Follow-up: {{ pass_with_followup }}</span>
+            <span class="badge bg-danger p-3">Blocked without Response: {{ blocked_no_response }}</span>
+            <span class="badge bg-danger p-3">Blocked with Follow-up: {{ blocked_followup }}</span>
+            <span class="badge bg-warning text-dark p-3">Blocked with Counterback: {{ blocked_counterback }}</span>
+            <span class="badge bg-secondary p-3">Misunderstanding: {{ misunderstanding }}</span>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div class="stats-card" style="height: 300px; display: flex; flex-direction: column; justify-content: center;">
+                <h5 class="text-center mb-4">Attack Result Distribution</h5>
+                <canvas id="attackResultChart" style="width: 100%; height: auto;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stats-card" style="height: 300px; display: flex; flex-direction: column; justify-content: center;">
+                <h5 class="text-center mb-4">Model Success/Block Breakdown</h5>
+                <canvas id="modelStackedChart" style="height: 350px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="stats-card text-center">
+<h4 class="text-center mb-4 fw-bold">
+    <i class="bi bi-clipboard-data-fill me-2"></i> Full Attack Summary
+</h4>
+<div class="row row-cols-1 row-cols-sm-3 row-cols-md-3 g-3 mb-4">
+  <!-- Attack Success Rate -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-2">Attack Success Rate</div>
+      <div class="d-flex align-items-center justify-content-center">
+        <div class="progress flex-grow-1 me-2" style="height: 20px; background-color: #dee2e6; position: relative;">
+          <div class="progress-bar bg-success" role="progressbar"
+               style="width: {{ attack_success_rate }}%;"
+               aria-valuenow="{{ attack_success_rate }}"
+               aria-valuemin="0" aria-valuemax="100"></div>
+          {% if attack_success_rate >= 15 %}
+            <span class="position-absolute w-100 text-center text-black fw-bold" style="font-size: 0.9rem;">
+              {{ attack_success_rate }}%
+            </span>
+          {% endif %}
+        </div>
+        {% if attack_success_rate < 15 %}
+          <span class="fw-bold text-dark ms-2">{{ attack_success_rate }}%</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Blocked Rate -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-2">Blocked Rate</div>
+      <div class="d-flex align-items-center justify-content-center">
+        <div class="progress flex-grow-1 me-2" style="height: 20px; background-color: #dee2e6; position: relative;">
+          <div class="progress-bar bg-danger" role="progressbar"
+               style="width: {{ blocked_rate }}%;"
+               aria-valuenow="{{ blocked_rate }}"
+               aria-valuemin="0" aria-valuemax="100"></div>
+          {% if blocked_rate >= 15 %}
+            <span class="position-absolute w-100 text-center text-black fw-bold" style="font-size: 0.9rem;">
+              {{ blocked_rate }}%
+            </span>
+          {% endif %}
+        </div>
+        {% if blocked_rate < 15 %}
+          <span class="fw-bold text-dark ms-2">{{ blocked_rate }}%</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Misunderstanding Rate -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-2">Misunderstanding Rate</div>
+      <div class="d-flex align-items-center justify-content-center">
+        <div class="progress flex-grow-1 me-2" style="height: 20px; background-color: #dee2e6; position: relative;">
+          <div class="progress-bar bg-secondary" role="progressbar"
+               style="width: {{ misunderstanding_rate }}%;"
+               aria-valuenow="{{ misunderstanding_rate }}"
+               aria-valuemin="0" aria-valuemax="100"></div>
+          {% if misunderstanding_rate >= 15 %}
+            <span class="position-absolute w-100 text-center text-black fw-bold" style="font-size: 0.9rem;">
+              {{ misunderstanding_rate }}%
+            </span>
+          {% endif %}
+        </div>
+        {% if misunderstanding_rate < 15 %}
+          <span class="fw-bold text-dark ms-2">{{ misunderstanding_rate }}%</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cols-1 row-cols-sm-3 row-cols-md-3 g-3 mt-3">
+  <!-- Total Pass -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Total Pass</div>
+      <div class="fs-3 fw-bold text-success">{{ successful_responses }}</div>
+    </div>
+  </div>
+  <!-- Total Blocked -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Total Blocked</div>
+      <div class="fs-3 fw-bold text-danger">{{ rejected_responses }}</div>
+    </div>
+  </div>
+  <!-- Total Misunderstanding -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Total Misunderstanding</div>
+      <div class="fs-3 fw-bold text-secondary">{{ misunderstanding }}</div>
+    </div>
+  </div>
+  <!-- Pass with Response -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Pass with Response</div>
+      <div class="fs-3 fw-bold text-success">{{ pass_with_response }}</div>
+    </div>
+  </div>
+  <!-- Pass with follow-up question -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Pass with follow-up question</div>
+      <div class="fs-3 fw-bold text-success">{{ pass_with_followup }}</div>
+    </div>
+  </div>
+  <!-- Blocked with no response -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Blocked with no response</div>
+      <div class="fs-3 fw-bold text-danger">{{ blocked_no_response }}</div>
+    </div>
+  </div>
+  <!-- Blocked with follow-up question -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Blocked with follow-up question</div>
+      <div class="fs-3 fw-bold text-danger">{{ blocked_followup }}</div>
+    </div>
+  </div>
+  <!-- Blocked Counterback -->
+  <div class="col">
+    <div class="border rounded p-3 bg-light h-100 text-center">
+      <div class="fw-bold text-muted mb-1">Blocked Counterback</div>
+      <div class="fs-3 fw-bold text-danger">{{ blocked_counterback }}</div>
+    </div>
+  </div>
+</div>
+    </div>
+<div class="d-flex justify-content-center gap-3 mb-5">
+    <a href="{{ url_for('home') }}" class="btn btn-outline-dark">
+        <i class="bi bi-house-door-fill me-1"></i> Home
+    </a>
+    <a href="{{ url_for('attack_results') }}" class="btn btn-dark">
+        <i class="bi bi-bar-chart-line-fill me-1"></i> Attack Results
+    </a>
+</div>
+{% include 'footer.html' %}
+</div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Donut Chart: Attack Result Distribution -->
+<script>
+const attackResultCtx = document.getElementById('attackResultChart').getContext('2d');
+new Chart(attackResultCtx, {
+    type: 'pie',
+    data: {
+        labels: [
+            'Pass w/ Response',
+            'Pass w/ Follow-up',
+            'Blocked w/ No Response',
+            'Blocked w/ Follow-up',
+            'Blocked w/ Counterback',
+            'Misunderstanding'
+        ],
+        datasets: [{
+            data: [
+                {{ pass_with_response }},
+                {{ pass_with_followup }},
+                {{ blocked_no_response }},
+                {{ blocked_followup }},
+                {{ blocked_counterback }},
+                {{ misunderstanding }}
+            ],
+            backgroundColor: ['#198754', '#20c997', '#dc3545', '#fd7e14', '#dc3545', '#ffc107']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        layout: {
+            padding: 0
+        },
+        animation: {
+            animateScale: true,
+            animateRotate: true
+        },
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    color: '#000'
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw;
+                        const total = context.chart._metasets[0].data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+
+<!-- Stacked Bar Chart: Model Success/Block Breakdown -->
+<script>
+const stackedCtx = document.getElementById('modelStackedChart').getContext('2d');
+new Chart(stackedCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ model_labels | safe }},
+        datasets: [
+            {
+                label: 'Passed',
+                data: {{ model_success_counts | safe }},
+                backgroundColor: '#198754'
+            },
+            {
+                label: 'Blocked',
+                data: {{ model_blocked_counts | safe }},
+                backgroundColor: '#dc3545'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                ticks: {
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    color: '#000'
+                }
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    color: '#000'
+                }
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>

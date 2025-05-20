@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dataset Review Queue</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .review-card {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: .5rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+    .review-card h6,
+    .review-card h4,
+    .review-card p {
+      margin-bottom: 0.3rem;
+      font-size: 0.85rem;
+    }
+    .review-card h4 {
+      font-size: 1.1rem;
+    }
+    .floating-label {
+      position: relative;
+    }
+    .floating-label input {
+      padding-left: 2.5rem;
+    }
+    .floating-label i {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6c757d;
+    }
+    .btn-filter {
+      border-color: black;
+      color: black;
+    }
+    .btn-filter.active {
+      background-color: black !important;
+      color: white !important;
+      border-color: black !important;
+    }
+    .table-hover tbody tr:hover {
+      background-color: #f1f3f5;
+    }
+    .badge-lock {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    .text-truncate {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.4s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+
+  {% include 'header.html' %}
+
+  <!-- Title + Leaderboard -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h3 class="mb-0 text-dark fw-bold" style="letter-spacing: 0.5px;">Dataset Review Queue</h3>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <!-- First Row: Name and Dataset -->
+      <div class="row g-4 mb-3">
+        <div class="col-md-6">
+          <label for="reviewer" class="form-label fw-semibold">Name</label>
+          <form method="get" class="input-group">
+            <input type="hidden" name="filter" value="{{ filter_by }}">
+            <input type="hidden" name="dataset_source" value="{{ dataset_source }}">
+            <input type="hidden" name="harmful_category" value="{{ harmful_category }}">
+            <input type="hidden" name="is_categorized" value="{{ is_categorized }}">
+            <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+            <input type="text" class="form-control" id="reviewer" name="reviewer" placeholder="Enter your name"
+                   value="{{ request.args.get('reviewer', '') }}">
+            <button type="submit" class="btn btn-outline-primary">Apply</button>
+          </form>
+        </div>
+        <div class="col-md-6">
+          <label for="dataset_source" class="form-label fw-semibold">Dataset</label>
+          <form method="get">
+            <input type="hidden" name="filter" value="{{ filter_by }}">
+            <input type="hidden" name="reviewer" value="{{ reviewer }}">
+            <input type="hidden" name="harmful_category" value="{{ harmful_category }}">
+            <input type="hidden" name="is_categorized" value="{{ is_categorized }}">
+            <select class="form-select" id="dataset_source" name="dataset_source" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for ds in dataset_sources %}
+                <option value="{{ ds.source_dataset }}" {% if request.args.get('dataset_source') == ds.source_dataset %}selected{% endif %}>
+                  {{ ds.source_dataset }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+      </div>
+
+      <!-- Second Row: Harmful Category and Missing Buttons -->
+      <div class="row g-4 mb-3">
+        <div class="col-md-6">
+          <label for="harmful_category" class="form-label fw-semibold">Harmful Category</label>
+          <form method="get" class="input-group">
+            <input type="hidden" name="filter" value="{{ filter_by }}">
+            <input type="hidden" name="reviewer" value="{{ reviewer }}">
+            <input type="hidden" name="dataset_source" value="{{ dataset_source }}">
+            <input type="hidden" name="is_categorized" value="{{ is_categorized }}">
+            <span class="input-group-text"><i class="bi bi-exclamation-triangle-fill"></i></span>
+            <select class="form-select" id="harmful_category" name="harmful_category" onchange="this.form.submit()">
+              <option value="">All</option>
+              {% for category in harmful_categories %}
+                <option value="{{ category }}" {% if request.args.get('harmful_category') == category %}selected{% endif %}>{{ category }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold d-block mb-1">Missing Translations</label>
+          <div class="btn-group">
+            <a href="{{ url_for('translation_result', filter='all', reviewer=reviewer, dataset_source=dataset_source, harmful_category=harmful_category, is_categorized=is_categorized) }}"
+               class="btn btn-outline-dark btn-filter {% if filter_by == 'all' or not filter_by %}active{% endif %}">All Missing</a>
+            <a href="{{ url_for('translation_result', filter='missing_egypt', reviewer=reviewer, dataset_source=dataset_source, harmful_category=harmful_category, is_categorized=is_categorized) }}"
+               class="btn btn-outline-dark btn-filter {% if filter_by == 'missing_egypt' %}active{% endif %}">Missing Egypt Cairene</a>
+            <a href="{{ url_for('translation_result', filter='missing_saudi', reviewer=reviewer, dataset_source=dataset_source, harmful_category=harmful_category, is_categorized=is_categorized) }}"
+               class="btn btn-outline-dark btn-filter {% if filter_by == 'missing_saudi' %}active{% endif %}">Missing Saudi Najdi</a>
+            <a href="{{ url_for('translation_result', filter='missing_both', reviewer=reviewer, dataset_source=dataset_source, harmful_category=harmful_category, is_categorized=is_categorized) }}"
+               class="btn btn-outline-dark btn-filter {% if filter_by == 'missing_both' %}active{% endif %}">Missing Both</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Third Row: Categorized Checkbox -->
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="form-check">
+            <form method="get" class="d-flex align-items-center">
+              <input type="hidden" name="filter" value="{{ filter_by }}">
+              <input type="hidden" name="reviewer" value="{{ reviewer }}">
+              <input type="hidden" name="dataset_source" value="{{ dataset_source }}">
+              <input type="hidden" name="harmful_category" value="{{ harmful_category }}">
+              <input class="form-check-input me-2" type="checkbox" id="is_categorized" name="is_categorized"
+                     onchange="this.form.submit()" {% if request.args.get('is_categorized') == 'on' %}checked{% endif %}>
+              <label class="form-check-label fw-semibold mb-0" for="is_categorized">
+                Categorized entries only
+              </label>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-0">
+      <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover table-bordered bg-white align-middle mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 15%;">Dataset</th>
+              <th style="width: 35%;">Prompt</th>
+              <th style="width: 35%;">MSA</th>
+              <th style="width: 10%;" class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr class="fade-in {% if filter_by in ['missing_egypt', 'missing_saudi', 'missing_both'] %}table-warning{% endif %}">
+              <td>{{ row.id }}</td>
+              <td><div class="text-truncate" style="max-width: 180px;">{{ row.source_dataset or '—' }}</div></td>
+              <td><div class="text-truncate" style="max-width: 300px;">{{ row.prompt or '—' }}{% if row.is_final %}<span class="badge bg-dark ms-2">Final</span>{% endif %}</div></td>
+              <td><div class="text-truncate" style="max-width: 300px;">{{ row.MSA or '—' }}</div></td>
+              <td class="text-center">
+                <button onclick="openReview({{ row.id }})" class="btn btn-sm btn-primary shadow-sm" title="Open Review">
+                  <i class="bi bi-pencil-square me-1"></i> Review
+                </button>
+                {% if row.locked_by and row.locked_at and row.locked_at > lock_expiry.isoformat() %}
+                  {% if row.locked_by == reviewer %}
+                    <span class="badge bg-success badge-lock mt-2">✅ You</span>
+                  {% else %}
+                    <span class="badge bg-danger badge-lock mt-2">🔒 {{ row.locked_by }}</span>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <nav aria-label="Pagination">
+    <ul class="pagination justify-content-center pagination-sm mt-4">
+      {% if page > 1 %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('translation_result', page=1, filter=filter_by, reviewer=reviewer, dataset_source=dataset_source) }}">&laquo; First</a></li>
+        <li class="page-item"><a class="page-link" href="{{ url_for('translation_result', page=page-1, filter=filter_by, reviewer=reviewer, dataset_source=dataset_source) }}">Previous</a></li>
+      {% endif %}
+      {% if start_page > 1 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+      {% for p in range(start_page, end_page + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('translation_result', page=p, filter=filter_by, reviewer=reviewer, dataset_source=dataset_source) }}">{{ p }}</a>
+        </li>
+      {% endfor %}
+      {% if end_page < total_pages %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+      {% if page < total_pages %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('translation_result', page=page+1, filter=filter_by, reviewer=reviewer, dataset_source=dataset_source) }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="{{ url_for('translation_result', page=total_pages, filter=filter_by, reviewer=reviewer, dataset_source=dataset_source) }}">Last &raquo;</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <div class="d-flex justify-content-center gap-3 mt-5 mb-5">
+    <a href="{{ url_for('home') }}" class="btn btn-outline-dark">
+      <i class="bi bi-house-door-fill me-1"></i> Home
+    </a>
+    <a href="{{ url_for('translation_leaderboard') }}" class="btn btn-dark">
+      <i class="bi bi-bar-chart-line-fill me-1"></i> Leaderboard
+    </a>
+    <a href="{{ url_for('translation_confirmation_first') }}" class="btn btn-dark" title="Go to the first unconfirmed row" {% if not has_pending %}disabled{% endif %}>
+      <i class="bi bi-check-circle-fill me-1"></i> Confirm Translation
+    </a>
+    <a href="{{ url_for('translation_statistics') }}" class="btn btn-dark">
+      <i class="bi bi-pie-chart-fill me-1"></i> Statistics
+    </a>
+  </div>
+  {% include 'footer.html' %}
+</div>
+
+<script>
+function openReview(id) {
+  const reviewerInput = document.getElementById('reviewer');
+  const reviewer = reviewerInput.value.trim();
+  if (!reviewer) {
+    alert('Please enter your name before reviewing.');
+    reviewerInput.focus();
+    return;
+  }
+  const url = new URL(window.location.origin + "{{ url_for('translation_review', id=0) }}".replace('/0', '/' + id));
+  url.searchParams.set('reviewer', reviewer);
+  window.location.href = url.toString();
+}
+</script>
+
+
+</body>
+</html>

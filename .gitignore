@@ -1,0 +1,6 @@
+.DS_Store
+ArabSafeDb.sqlite
+.idea/
+*/__pycache__/
+__pycache__/
+config.py

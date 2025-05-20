@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>LLM Attack Results</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to right, #f8f9fa, #e9ecef);
+      font-family: system-ui, sans-serif;
+    }
+    .card {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #dee2e6;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      background-color: #ffffff;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .table-hover tbody tr:hover {
+      background-color: #f1f3f5;
+    }
+    .table thead th {
+      position: sticky;
+      top: 0;
+      background-color: #343a40;
+      color: white;
+    }
+    .pagination .page-link {
+      border-radius: 0.5rem;
+      margin: 0 2px;
+    }
+    .btn-outline-primary, .btn-outline-secondary {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+
+  {% include 'header.html' %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert" id="flashMessage">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="mb-4">
+    <h2 class="fw-bold text-dark mb-0" style="letter-spacing: 0.5px;">LLM Attack Results</h2>
+  </div>
+
+  <!-- Filters Placeholder -->
+  <div class="card mb-4 p-4 shadow-sm bg-light border-0">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Model</label>
+        <select name="model" class="form-select">
+          <option value="">All</option>
+          <option value="OpenAI GPT-4" {% if request.args.get('model') == 'OpenAI GPT-4' %}selected{% endif %}>OpenAI GPT-4</option>
+          <option value="Claude 3 Sonnet" {% if request.args.get('model') == 'Claude 3 Sonnet' %}selected{% endif %}>Claude 3 Sonnet</option>
+          <option value="Gemini 1.5 Pro" {% if request.args.get('model') == 'Gemini 1.5 Pro' %}selected{% endif %}>Gemini 1.5 Pro</option>
+          <option value="DeepSeek R1" {% if request.args.get('model') == 'DeepSeek R1' %}selected{% endif %}>DeepSeek R1</option>
+          <option value="Qwen 2.5 Coder 32B" {% if request.args.get('model') == 'Qwen 2.5 Coder 32B' %}selected{% endif %}>Qwen 2.5 Coder 32B</option>
+          <option value="Mistral Saba" {% if request.args.get('model') == 'Mistral Saba' %}selected{% endif %}>Mistral Saba</option>
+          <option value="ALLaM 1" {% if request.args.get('model') == 'ALLaM 1' %}selected{% endif %}>ALLaM 1</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Dialect</label>
+        <select name="dialect" class="form-select">
+          <option value="">All</option>
+          <option value="MSA" {% if request.args.get('dialect') == 'MSA' %}selected{% endif %}>MSA</option>
+          <option value="Egyptian" {% if request.args.get('dialect') == 'Egyptian' %}selected{% endif %}>Egypt Cairene</option>
+          <option value="Saudi" {% if request.args.get('dialect') == 'Saudi' %}selected{% endif %}>Saudi Najdi</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Response Status</label>
+        <select name="response_status" class="form-select">
+          <option value="">All</option>
+          <option value="Pass with response" {% if request.args.get('response_status') == 'Pass with response' %}selected{% endif %}>Pass with response</option>
+          <option value="Pass with follow-up question" {% if request.args.get('response_status') == 'Pass with follow-up question' %}selected{% endif %}>Pass with follow-up question</option>
+          <option value="Blocked with no response" {% if request.args.get('response_status') == 'Blocked with no response' %}selected{% endif %}>Blocked with no response</option>
+          <option value="Blocked with empty response" {% if request.args.get('response_status') == 'Blocked with empty response' %}selected{% endif %}>Blocked with empty response</option>
+          <option value="Blocked with follow-up question" {% if request.args.get('response_status') == 'Blocked with follow-up question' %}selected{% endif %}>Blocked with follow-up question</option>
+          <option value="Blocked with counterback" {% if request.args.get('response_status') == 'Blocked with counterback' %}selected{% endif %}>Blocked with counterback</option>
+          <option value="Misunderstanding" {% if request.args.get('response_status') == 'Misunderstanding' %}selected{% endif %}>Misunderstanding</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Reviewed</label>
+        <select name="reviewed" class="form-select">
+          <option value="">All</option>
+          <option value="true" {% if request.args.get('reviewed') == 'true' %}selected{% endif %}>Reviewed</option>
+          <option value="false" {% if request.args.get('reviewed') == 'false' %}selected{% endif %}>Not Reviewed</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Version</label>
+        <select name="version" class="form-select">
+          <option value="">All</option>
+          <option value="1" {% if request.args.get('version') == '1' %}selected{% endif %}>Version 1</option>
+          <option value="2" {% if request.args.get('version') == '2' %}selected{% endif %}>Version 2</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex justify-content-end align-items-end gap-2">
+        <a href="{{ url_for('attack_results') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-circle"></i> Clear
+        </a>
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="bi bi-funnel-fill"></i> Apply
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Results Table -->
+  <div class="table-responsive card p-3">
+    <table class="table table-bordered table-hover table-sm align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Model Name</th>
+          <th>Dialect</th>
+          <th>Version</th>
+          <th>Prompt (Sent)</th>
+          <th>Response</th>
+          <th>Attack Passed</th>
+          <th>Reviewed</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if results %}
+        {% for result in results %}
+        <tr class="{% if loop.index0 // 7 % 2 == 0 %}table-secondary{% else %}table-white{% endif %}">
+          <td>{{ result.id }}</td>
+          <td>{{ result.model_name }}</td>
+          <td>{{ result.dialect }}</td>
+          <td>{{ result.version }}</td>
+          <td>
+            <div class="overflow-hidden text-break" style="max-width: 400px; max-height: 2.8em; line-height: 1.4em; overflow: hidden;" title="{{ result.egypt_prompt or result.saudi_prompt or result.msa_prompt }}">
+              {{ result.egypt_prompt or result.saudi_prompt or result.msa_prompt }}
+            </div>
+          </td>
+          <td>
+            <div class="overflow-hidden text-break" style="max-width: 400px; max-height: 2.8em; line-height: 1.4em; overflow: hidden;" title="{{ result.response_text }}">
+              {{ result.response_text }}
+            </div>
+          </td>
+          <td class="text-center">
+            {% if result.response_status %}
+              {% if 'Pass' in result.response_status %}
+                <span class="badge rounded-pill bg-success px-3 py-2">{{ result.response_status }}</span>
+              {% elif 'Blocked with empty response' == result.response_status %}
+                <span class="badge rounded-pill bg-danger px-3 py-2">{{ result.response_status }}</span>
+              {% elif 'Blocked' in result.response_status %}
+                <span class="badge rounded-pill bg-danger px-3 py-2">{{ result.response_status }}</span>
+              {% else %}
+                <span class="badge rounded-pill bg-secondary px-3 py-2">{{ result.response_status }}</span>
+              {% endif %}
+            {% else %}
+              <span class="badge rounded-pill bg-secondary px-3 py-2">Unknown</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if result.Reviewed == 'true' %}
+              <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            {% else %}
+              <i class="bi bi-x-circle-fill text-danger fs-5"></i>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('attack_review', id=result.id) }}" class="btn btn-sm btn-outline-primary">Review</a>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            No results found.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-center">
+    <nav class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('attack_results', page=1, model=request.args.get('model', ''), dialect=request.args.get('dialect', ''), response_status=request.args.get('response_status', ''), reviewed=request.args.get('reviewed', '')) }}">« First</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('attack_results', page=page-1, model=request.args.get('model', ''), dialect=request.args.get('dialect', ''), response_status=request.args.get('response_status', ''), reviewed=request.args.get('reviewed', '')) }}">‹ Prev</a>
+          </li>
+        {% endif %}
+
+        {% set start_page = 1 if page - 5 < 1 else page - 5 %}
+        {% set end_page = total_pages if page + 4 > total_pages else page + 4 %}
+        {% for p in range(start_page, end_page + 1) %}
+          <li class="page-item {% if p == page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('attack_results', page=p, model=request.args.get('model', ''), dialect=request.args.get('dialect', ''), response_status=request.args.get('response_status', ''), reviewed=request.args.get('reviewed', '')) }}">{{ p }}</a>
+          </li>
+        {% endfor %}
+
+        {% if page < total_pages %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('attack_results', page=page+1, model=request.args.get('model', ''), dialect=request.args.get('dialect', ''), response_status=request.args.get('response_status', ''), reviewed=request.args.get('reviewed', '')) }}">Next ›</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('attack_results', page=total_pages, model=request.args.get('model', ''), dialect=request.args.get('dialect', ''), response_status=request.args.get('response_status', ''), reviewed=request.args.get('reviewed', '')) }}">Last »</a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+
+  <div class="d-flex justify-content-center gap-3 mt-5 mb-5">
+    <a href="{{ url_for('home') }}" class="btn btn-outline-dark">
+      <i class="bi bi-house-door-fill me-1"></i> Home
+    </a>
+    <a href="{{ url_for('attack_statistics') }}" class="btn btn-dark">
+      <i class="bi bi-pie-chart-fill me-1"></i> Statistics
+    </a>
+  </div>
+  {% include 'footer.html' %}
+</div>
+</body>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const flash = document.getElementById('flashMessage');
+    if (flash) {
+      setTimeout(function() {
+        flash.classList.remove('show');
+        flash.classList.add('fade');
+      }, 2000);
+    }
+  });
+</script>
+</html>
